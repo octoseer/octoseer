@@ -7,20 +7,54 @@
 
 import Foundation
 
+struct Plugin: Decodable {
+
+    let execPath: String
+    let info: PluginInfo
+}
+
+struct PluginInfo: Decodable {
+    let trials: [String]
+}
+
 class PluginService {
 
-    func listPlugins() -> [String] {
-        print(FileManager.default.currentDirectoryPath)
+    private let pluginsDirPath = "/tmp"
+    private let pluginExtensionName = "trial"
 
-        let e = try! FileManager.default
-            .contentsOfDirectory(at: URL.init(fileURLWithPath: FileManager.default.currentDirectoryPath), includingPropertiesForKeys: nil, options: [])
+    func listPlugins() -> [String] {
+        let pluginsPaths = try! FileManager.default
+            .contentsOfDirectory(at: URL.init(fileURLWithPath: pluginsDirPath),
+                                 includingPropertiesForKeys: nil,
+                                 options: [])
             .filter { FileManager.default.isExecutableFile(atPath: $0.path) }
+            .filter { $0.pathExtension == pluginExtensionName }
             .map { $0.path }
 
+        return pluginsPaths
+    }
 
-        print(e)
+    func loadPlugins() -> [Plugin] {
 
-        return e
+        return listPlugins().map { pluginPath -> Plugin? in
+            let output = Result { try Process.execute(pluginPath, ["--info"]) }
+
+            switch output {
+            case .success(let data):
+                print("PLUGIN OUT: ", data)
+
+                guard let pluginInfo = try? JSONDecoder().decode(PluginInfo.self, from: data) else { return nil }
+
+                print("PLUGIN INFO:", pluginInfo)
+
+                return Plugin(execPath: pluginPath, info: pluginInfo)
+
+            case .failure(let error):
+                print("PLUGIN ERROR: ", error)
+                return nil
+            }
+        }
+        .compactMap { $0 }
     }
 }
 
