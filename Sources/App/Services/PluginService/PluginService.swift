@@ -17,6 +17,12 @@ struct PluginInfo: Decodable {
     let trials: [String]
 }
 
+
+struct Trial {
+    let name: String
+    let execPath: String
+}
+
 class PluginService {
 
     private let pluginsDirPath = "/tmp"
@@ -56,6 +62,13 @@ class PluginService {
         }
         .compactMap { $0 }
     }
+
+    func loadTrials() -> [Trial] {
+        return loadPlugins().flatMap { plugin in
+            return plugin.info.trials.map { Trial(name: $0, execPath: plugin.execPath) }
+        }
+    }
 }
 
 let pluginService = PluginService()
+let kTrials = pluginService.loadTrials()

@@ -33,6 +33,23 @@ struct CheckRunCreateRequest: Content {
     }
 }
 
+struct CheckRunOutput: Content {
+    let title: String
+    let summary: String
+}
+
+struct CheckRunUpdateRequest: Content {
+    let name: String
+    let headSha: String
+    let output: CheckRunOutput
+
+    enum CodingKeys: String, CodingKey {
+        case headSha = "head_sha"
+        case name
+        case output
+    }
+}
+
 class GithubService {
 
     let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -93,6 +110,28 @@ class GithubService {
                                       url: "/repos/\(repositoryName)/check-runs",
                                       headers: HTTPHeaders(headers),
                                       body: try! JSONEncoder().encode(checkRun))
+
+        let response = httpClient.flatMap { $0.send(httpRequest) }
+
+        return Result { let _ = try response.wait() }
+    }
+
+    func updateCheckRun(repositoryName: String, checkRun: CheckRun, output: CheckRunOutput) -> Result<Void, Error> {
+        guard let installationToken = try? getInstallationToken().get() else {
+            return .failure(GithubServiceError.requestError)
+        }
+
+        let headers = makeCheckRunRequestHeader(installationToken: installationToken.token)
+
+        let body = CheckRunUpdateRequest(name: checkRun.name,
+                                         headSha: checkRun.headSha,
+                                         output: output)
+
+
+        let httpRequest = HTTPRequest(method: .PATCH,
+                                      url: "/repos/\(repositoryName)/check-runs/\(checkRun.id)",
+                                      headers: HTTPHeaders(headers),
+                                      body: try! JSONEncoder().encode(body))
 
         let response = httpClient.flatMap { $0.send(httpRequest) }
 
