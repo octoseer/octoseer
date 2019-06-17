@@ -37,7 +37,26 @@ struct CheckRunOutput: Content {
     let title: String
     let summary: String
     let text: String
+    let annotations: [Annotation]
 }
+
+struct Annotation: Content {
+    let path: String
+    let startLine: Int
+    let endLine: Int
+    let annotationLevel: String
+    let message: String
+
+    enum CodingKeys: String, CodingKey {
+        case startLine = "start_line"
+        case endLine = "end_line"
+        case annotationLevel = "annotation_level"
+
+        case path
+        case message
+    }
+}
+
 
 struct CheckRunUpdateRequest: Content {
     let name: String
