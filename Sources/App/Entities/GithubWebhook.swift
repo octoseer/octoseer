@@ -37,20 +37,28 @@ struct Installation: Content {
 }
 
 struct CheckSuite: Content {
+    let id: Int
     let headSha: String
 
     enum CodingKeys: String, CodingKey {
         case headSha = "head_sha"
+        case id
     }
+}
+
+struct CheckSuiteID: Content {
+    let id: Int
 }
 
 struct CheckRun: Content {
     let id: Int
     let headSha: String
     let name: String
+    let checkSuite: CheckSuiteID
 
     enum CodingKeys: String, CodingKey {
         case headSha = "head_sha"
+        case checkSuite = "check_suite"
 
         case id
         case name

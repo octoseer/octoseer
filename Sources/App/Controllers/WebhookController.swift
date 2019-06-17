@@ -53,11 +53,19 @@ class AAA {
 
         if let checkrun = webhook.checkRun {
             print("CHECK RUN")
+            print("HSA CHECK SUITE: ", webhook.checkSuite)
             print("CHECK ID: ", checkrun.id)
             print("CHECK NAME: ", checkrun.name)
             print("CHECK SHA: ", checkrun.headSha)
 
-            guard let output = self.processCheckRun(checkRun: checkrun) else {
+            guard let token = try? github.getInstallationToken().get() else {
+                print("Failed to get installation token for CheckRun")
+                return
+            }
+
+            guard let output = self.processCheckRun(checkRun: checkrun,
+                                                    repoName: webhook.repository.fullName,
+                                                    installationToken: token.token) else {
                 print("ERROR WITH OUTPUT")
                 return
             }
@@ -80,7 +88,37 @@ class AAA {
 
     }
 
-    func processCheckRun(checkRun: CheckRun) -> CheckRunOutput? {
+    func processCheckRun(checkRun: CheckRun, repoName: String, installationToken: String) -> CheckRunOutput? {
+
+
+        prepareWorkDir(for: repoName, with: installationToken)
+        return runTrial(for: checkRun)
+    }
+
+    func prepareWorkDir(for repoName: String, with token: String) -> String {
+
+        let uuid = UUID().uuidString
+        let dirPath = "/tmp/\(uuid)"
+        let execArgs = ["clone", "https://x-auth-token:\(token)@github.com/\(repoName)", dirPath]
+
+        print(execArgs)
+
+        let output = Result { try Process.execute("git", execArgs) }
+
+        switch output {
+        case .failure(let error):
+            print("ERROR: ", error)
+        case .success(let data):
+            print("DATA: ", data)
+        }
+
+
+        print(try? output.get())
+
+        return dirPath
+    }
+
+    func runTrial(for checkRun: CheckRun) -> CheckRunOutput? {
         guard let trial = kTrials.first(where: { $0.name == checkRun.name }) else {
             print("Trial with name `\(checkRun.name)` not found.")
             return nil
@@ -104,7 +142,6 @@ class AAA {
             print("PLUGIN ERROR: ", error)
             return nil
         }
-
     }
 
 }
