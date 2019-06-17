@@ -36,6 +36,7 @@ struct CheckRunCreateRequest: Content {
 struct CheckRunOutput: Content {
     let title: String
     let summary: String
+    let text: String
 }
 
 struct CheckRunUpdateRequest: Content {

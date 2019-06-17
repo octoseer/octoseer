@@ -91,21 +91,34 @@ class AAA {
     func processCheckRun(checkRun: CheckRun, repoName: String, installationToken: String) -> CheckRunOutput? {
 
 
-        prepareWorkDir(for: repoName, with: installationToken)
-        return runTrial(for: checkRun)
+        let workDir = prepareWorkDir(for: repoName, with: installationToken, with: checkRun)
+        return runTrial(for: checkRun, in: workDir)
     }
 
-    func prepareWorkDir(for repoName: String, with token: String) -> String {
+    func prepareWorkDir(for repoName: String, with token: String, with check: CheckRun) -> String {
 
         let uuid = UUID().uuidString
         let dirPath = "/tmp/\(uuid)"
-        let execArgs = ["clone", "https://x-auth-token:\(token)@github.com/\(repoName)", dirPath]
+        let execArgs = [
+            "clone",
+            "https://x-auth-token:\(token)@github.com/\(repoName)",
+            dirPath
+        ]
 
         print(execArgs)
 
         let output = Result { try Process.execute("git", execArgs) }
+//        let output2 = Result { try Process.execute("cd", "\(dirPath)") }
+        let output3 = Result { try Process.execute("git", "-C", "\(dirPath)", "reset", "--hard", "\(check.headSha)") }
 
         switch output {
+        case .failure(let error):
+            print("ERROR: ", error)
+        case .success(let data):
+            print("DATA: ", data)
+        }
+
+        switch output3 {
         case .failure(let error):
             print("ERROR: ", error)
         case .success(let data):
@@ -118,7 +131,7 @@ class AAA {
         return dirPath
     }
 
-    func runTrial(for checkRun: CheckRun) -> CheckRunOutput? {
+    func runTrial(for checkRun: CheckRun, in workDir: String) -> CheckRunOutput? {
         guard let trial = kTrials.first(where: { $0.name == checkRun.name }) else {
             print("Trial with name `\(checkRun.name)` not found.")
             return nil
@@ -126,7 +139,7 @@ class AAA {
 
         print("STARTING TRIAL: ", trial.name)
 
-        let output = Result { try Process.execute(trial.execPath, ["--start"]) }
+        let output = Result { try Process.execute(trial.execPath, ["--start", workDir]) }
 
         print("TRIAL OUTPUT: ", try? output.get())
 
