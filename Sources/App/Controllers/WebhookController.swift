@@ -51,17 +51,28 @@ class AAA {
 
         let github = GithubService(installationID: webhook.installation.id)
 
+        print("ACTION: ", webhook.action)
+
         if let checkrun = webhook.checkRun {
             print("CHECK RUN")
+            print("STATUS: ", checkrun.status)
+            print("CONCLUSION: ", checkrun.conclusion)
+
             print("HSA CHECK SUITE: ", webhook.checkSuite)
             print("CHECK ID: ", checkrun.id)
             print("CHECK NAME: ", checkrun.name)
             print("CHECK SHA: ", checkrun.headSha)
 
+            guard checkrun.status == "queued" || webhook.action == "rerequested" else { return }
+            guard checkrun.conclusion == nil || webhook.action == "rerequested" else { return }
+
             guard let token = try? github.getInstallationToken().get() else {
                 print("Failed to get installation token for CheckRun")
                 return
             }
+
+            github.setCheckRunAsInProgress(repositoryName: webhook.repository.fullName,
+                                           checkRun: checkrun)
 
             guard let output = self.processCheckRun(checkRun: checkrun,
                                                     repoName: webhook.repository.fullName,
@@ -70,9 +81,16 @@ class AAA {
                 return
             }
 
-            github.updateCheckRun(repositoryName: webhook.repository.fullName,
-                                  checkRun: checkrun,
-                                  output: output)
+            let res = github.updateCheckRun(repositoryName: webhook.repository.fullName,
+                                            checkRun: checkrun,
+                                            output: output)
+
+            switch res {
+            case .failure(let error):
+                print("ERROR: ", error)
+            case .success(let data):
+                print("DATA: ", data)
+            }
 
             return
         }
@@ -108,7 +126,6 @@ class AAA {
         print(execArgs)
 
         let output = Result { try Process.execute("git", execArgs) }
-//        let output2 = Result { try Process.execute("cd", "\(dirPath)") }
         let output3 = Result { try Process.execute("git", "-C", "\(dirPath)", "reset", "--hard", "\(check.headSha)") }
 
         switch output {
@@ -124,7 +141,6 @@ class AAA {
         case .success(let data):
             print("DATA: ", data)
         }
-
 
         print(try? output.get())
 

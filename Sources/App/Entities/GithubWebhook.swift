@@ -55,6 +55,8 @@ struct CheckRun: Content {
     let headSha: String
     let name: String
     let checkSuite: CheckSuiteID
+    let status: String
+    let conclusion: String?
 
     enum CodingKeys: String, CodingKey {
         case headSha = "head_sha"
@@ -62,5 +64,7 @@ struct CheckRun: Content {
 
         case id
         case name
+        case conclusion
+        case status
     }
 }
