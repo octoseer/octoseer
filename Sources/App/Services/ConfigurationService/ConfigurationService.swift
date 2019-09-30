@@ -18,17 +18,33 @@ extension ConfigurationService: ConfigurationProvider {
     var configuration: ConfigurationData {
         return configurationData
     }
+}
 
-    func loadConfiguration(from filePath: String) {
-        if let configData = FileManager.default.contents(atPath: filePath),
-            let data = String(bytes: configData, encoding: .utf8) {
-            print(data)
-            let config = try? YAMLDecoder().decode(ConfigurationData.self,
-                                                   from: data)
+extension ConfigurationService: ConfigurationLoader {
 
-            self.configurationData = config
+    enum ConfigurationError: Error {
+        case fileError
+    }
+
+    func loadConfiguration(fromPath filePath: String) -> Result<Void, Error> {
+        if let configFileRawData = FileManager.default.contents(atPath: filePath),
+            let configFileData = String(bytes: configFileRawData, encoding: .utf8) {
+            let configDecodingResult = Result {
+                try YAMLDecoder().decode(ConfigurationData.self,
+                                                           from: configFileData)
+            }
+
+            switch configDecodingResult {
+            case .success(let configuration):
+                configurationData = configuration
+            case .failure(let error):
+                return .failure(error)
+            }
+
         } else {
-            fatalError("Configuration file error")
+            return .failure(ConfigurationError.fileError)
         }
+
+        return .success(())
     }
 }

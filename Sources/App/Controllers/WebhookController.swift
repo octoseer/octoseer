@@ -40,6 +40,8 @@ class AAA {
     let subject = PublishSubject<GithubWebhook>()
     let bag = DisposeBag()
 
+    private let trialStorage = AppAssembly.shared.resolve(TrialStorage.self)
+
     init() {
         subject.debug()
             .subscribe(onNext: { [weak self] webhook in
@@ -99,7 +101,7 @@ class AAA {
 
         guard let headSha = webhook.checkSuite?.headSha else { return }
 
-        kTrials.forEach { trial in
+        trialStorage.trials.forEach { trial in
             let payload = CheckRunCreateRequest(name: trial.name, headSha: headSha)
             _ = github.createCheckRun(repositoryName: webhook.repository.fullName, checkRun: payload)
         }
@@ -148,7 +150,7 @@ class AAA {
     }
 
     func runTrial(for checkRun: CheckRun, in workDir: String) -> CheckRunOutput? {
-        guard let trial = kTrials.first(where: { $0.name == checkRun.name }) else {
+        guard let trial = trialStorage.trials.first(where: { $0.name == checkRun.name }) else {
             print("Trial with name `\(checkRun.name)` not found.")
             return nil
         }
