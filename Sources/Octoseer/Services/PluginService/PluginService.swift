@@ -17,11 +17,12 @@ struct Trial {
 
 class PluginService {
 
-    private lazy var configuration: ConfigurationData = {
-        let configurationProvider = AppAssembly.shared.resolve(ConfigurationProvider.self)
+    @Injected
+    private var configurationProvider: ConfigurationProvider
 
+    private var configuration: ConfigurationData {
         return configurationProvider.configuration
-    }()
+    }
 
     private func listPlugins() -> Result<[String], Error> {
         let pluginsPaths = Result {
